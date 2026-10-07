@@ -1,0 +1,16 @@
+#If you and a friend run this code and get differnet results here what to check !!
+1. is the code ran in VS CODE
+2. Are the packages up to date 
+3. is there an extension preventing the code 
+4. Sometimes "#" may get displaced check all "#"
+5. Update all library and packages 
+6. some code may need to be pushed direclty to the terminal for exmaple 
+ggoplots need to be pushed direclty to the terminal 
+7. run each part of the script one by one coding enviroments have built in errors use these to trouble shoot errors 
+8. Consult resources like:
+https://dplyr.tidyverse.org/reference/filter.html
+https://r-packages.io/datasets/airway
+https://www.bioconductor.org/
+
+9. If all else fails consult AI read through what ai is output and ask yourself dose this make sense
+hope this helps
