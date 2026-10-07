@@ -7,3 +7,8 @@ install.packages("tidyverse")
 install.packages("BiocManager")
 BiocManager::install()
 BiocManager::install("airway")
+
+ BiocManager::install("airway", ask = FALSE, update = FALSE)
+  install.packages(c("tidyverse", "kn)
+  
+
