@@ -1,0 +1,178 @@
+library(DiscreteDatasets)
+library(tidyverse)
+
+
+airway <- DiscreteDatasets::airway
+
+colnames(airway)
+library(airway)
+data("airway", package = "airway")
+library(knitr) 
+
+# Pull out the exact 8-sample data frame
+airway_samples <- as.data.frame(assay(airway, "counts"))
+
+# View it as a spreadsheet
+View(airway_samples)
+
+#combine  the 8  sample ids back into the intended two groups control and treatment
+
+counts <-as.data.frame(assay(airway, "counts"))
+
+#combines the even which are the  dexamethaone treated samples as "treated" and non treated as "control"
+Ogairway<- data.frame( 
+    Treatment = rowSums(counts[, c("SRR1039509", "SRR1039513", "SRR1039517", "SRR1039521")]),
+    Control = rowSums(counts[,c("SRR1039508", "SRR1039512", "SRR1039516", "SRR1039520")]),
+    row.names  = rownames(counts)
+
+
+)
+
+#filter out genes with no expression future create a list of the gens with no expression
+Ogairway_NA_Expression <- Ogairway %>% 
+filter(Treatment > 0 & Control > 0)
+view(Ogairway_NA_Expression)
+
+#check how many rows-AKA genes were removed
+nrow(Ogairway)
+#has total genes 63677
+nrow(Ogairway_NA_Expression)
+# total genes 27450
+
+#numerically shows thsis
+Ogairwaynum  = 63677
+Ogairway_NA_ExpressionNum = 27450
+Ogairwaynum - Ogairway_NA_ExpressionNum 
+#36227 no expression to dexamsone
+#fruther analysis of this data set stastically will happen later in the 6 months timeline utlizing bioconductor packages among other like the fold reads
+
+
+# removes duplicate rows 
+NoDup <-distinct(Ogairway_NA_Expression,keep_all = FALSE)
+#remvoes values less than 10
+ Lowexpression_Fil <- filter(Ogairway_NA_Expression, Treatment >= 10 & Control >= 10)
+ View(Lowexpression_Fil)
+
+ #slicng for high values
+ Hg_EXP <-slice_max(Lowexpression_Fil,order_by = Treatment,n=400)
+ View(Hg_EXP)
+#slice of min values
+ low_EXP <-slice_min(Lowexpression_Fil,order_by=Treatment,n=400)
+View(low_EXP)
+#what if we wanted to add a new gene to the data ?
+
+# 1. Convert row names to a "Gene" column so they don't get deleted
+Lowexpression_Fil_Safe <- rownames_to_column(Lowexpression_Fil, var = "Gene")
+
+# 2 Find the exact row number for ENSG00000000003 (don't forget the quotes!)
+target_row <- which(Lowexpression_Fil_Safe$Gene == "ENSG00000000003")
+
+# 3 Add the new row 
+Lowexpression_Updated <- Lowexpression_Fil_Safe %>%
+  add_row(
+    Gene = "MY_NEW_GENE",  
+    Treatment = 100,       
+    Control = 100,         
+    .before = target_row
+  )
+
+#4 
+View(Lowexpression_Updated)
+
+#Combing varriables so we can in the future groups can be anaylized 
+combined_min_max <- bind_rows(Hg_EXP, Lowexpression_Fil) %>%
+distinct()
+sample_Mm <- combined_min_max %>%
+slice_sample(prop=0.12)
+View(sample_Mm)
+
+#pulling a ramdom sample from the combined data of min and max  and a sample from the total data
+sample_Mm <- combined_min_max %>%
+slice_sample(prop=0.12)
+View(sample_Mm)
+#sampele from the total populaiton
+sample_TP <- Ogairway%>% 
+slice_sample( prop=0.10 )
+view(sample_TP)
+
+#Plots!!!!!!!
+
+#Plot 1 is the base data sample
+
+Plot_1<-ggplot(sample_TP,aes(x=Control,y=Treatment,))+
+geom_point(color = "#146cd1",alpha = 0.7)+
+scale_x_log10(labels = scales:: comma)+
+scale_y_log10(labels = scales:: comma) +
+labs(title = "Sample of Gene Population",
+subtitle = "10% of the Population Control vs Treated",
+caption = "The Zeros cause an error",
+x = "Control Counts (Log10 Scale)",
+    y = "Treated Counts (Log10 Scale)"
+
+
+
+)+theme_classic(base_size =14 )
+
+#saves GGPlot
+ggsave(filename="Plot_1.png",
+plot=Plot_1,
+width =8,
+height = 6,
+dpi=300
+
+)
+
+
+dev.new()
+Plot_1
+
+Plot_2 <- ggplot(sample_Mm, aes(x = Control, y = Treatment)) +
+  geom_point(color = "#27ae60", size = 2.5, alpha = 0.8) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
+  labs(
+    title = "High & Low Expression Extremes",
+    subtitle = "12% subset of the highest and lowest responding airway genes",
+    x = "Control Counts (Log10 Scale)",
+    y = "Treated Counts (Log10 Scale)"
+  ) +
+  theme_classic(base_size = 14)
+
+ggsave(filename = "Plot_2.png",
+       plot = Plot_2,
+       width = 8,
+       height = 6)
+
+Plot_3_Final <- ggplot(bottom_15, aes(x = reorder(Gene, Treatment), y = Treatment)) +
+  geom_segment(aes(xend = Gene, yend = 0), color = "gray60", linewidth = 1) +
+  geom_point(color = "#e74c3c", size = 4) +
+  coord_flip() +
+  labs(
+    title = "Floor Expression: Lowest Responding Genes",
+    subtitle = "Absolute bottom 15 genes in the dexamethasone cohort",
+    x = "Ensembl Gene ID",
+    y = "Treated Counts"
+  ) +
+  theme_classic(base_size = 14)
+
+# 4. View and Save
+Plot_3_Final
+
+ggsave(filename = "Plot_3_Final.png", 
+       plot = Plot_3_Final, 
+       width = 8, 
+       height = 6, 
+       dpi = 300)
+
+       Fig_1_Table <- kable(
+  head(Lowexpression_Updated, 10), # Shows the top 10 rows (including your added gene)
+  col.names = c("Gene ID (Ensembl / Custom)", "Dexamethasone Treated", "Control"),
+  caption = "Figure 1: Gene Expression Sample Table (Highlighted Row Insertion)",
+  align = "lcc"
+)
+
+# View the outputs
+
+print(Fig_1_Table)
+# This saves the dataframe as a spreadsheet file in your folder
+write_csv(Lowexpression_Updated, "My_Slide_Table.csv")
